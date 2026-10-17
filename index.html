@@ -1,0 +1,646 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>取材完了報告書 入力ツール</title>
+<style>
+/* 左：入力フォーム / 右：A4プレビュー（印刷時は用紙だけ出力） */
+:root{
+  --bg:#eef0f2; --panel:#ffffff; --ink:#1d2329; --muted:#66707a; --line:#cfd5db;
+  --accent:#1f5fa8; --accent-ink:#ffffff; --soft:#e6eef8; --danger:#b3261e;
+  --ui:"Yu Gothic UI","Yu Gothic","Meiryo","Hiragino Sans","Noto Sans JP",sans-serif;
+  --paper:"Yu Gothic","YuGothic","Meiryo","Hiragino Kaku Gothic ProN","Noto Sans JP",sans-serif;
+  --pop:"HGP創英角ﾎﾟｯﾌﾟ体","HGS創英角ﾎﾟｯﾌﾟ体","HG創英角ﾎﾟｯﾌﾟ体","Yu Gothic","Meiryo",sans-serif;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--ui)}
+header.bar{position:sticky;top:0;z-index:5;background:var(--panel);border-bottom:1px solid var(--line);
+  display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;padding:10px 16px}
+header.bar h1{font-size:17px;margin:0;font-weight:700}
+header.bar .sp{flex:1}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
+  border-radius:6px;padding:6px 12px}
+button:hover{background:var(--soft)}
+button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700;padding:8px 18px}
+button.primary:hover{filter:brightness(1.1)}
+button.danger{color:var(--danger)}
+button:focus-visible,input:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.wrap{display:grid;grid-template-columns:minmax(0,560px) minmax(0,1fr);gap:16px;padding:16px}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}}
+.form{display:flex;flex-direction:column;gap:14px;min-width:0}
+section.box{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px}
+section.box h2{font-size:15px;margin:0;display:flex;align-items:center;gap:8px}
+section.box h2 .tag{font-size:11px;font-weight:400;color:var(--muted)}
+.row{display:grid;grid-template-columns:110px minmax(0,1fr);gap:6px 10px;align-items:center}
+.row > label{font-size:13px;color:var(--muted)}
+input[type=text],input[type=date],textarea{font:inherit;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:5px;background:var(--panel);color:var(--ink)}
+textarea{resize:vertical;min-height:52px}
+input::placeholder,textarea::placeholder{color:#a3abb3}
+.dates{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.datebtn{flex:1;min-width:0;text-align:left;padding:7px 10px;display:flex;align-items:center;gap:8px;font-variant-numeric:tabular-nums}
+.datebtn .ic{width:16px;height:16px;flex:none;border:1.6px solid var(--muted);border-radius:3px;position:relative}
+.datebtn .ic::before{content:"";position:absolute;left:-1.6px;right:-1.6px;top:3px;border-top:1.6px solid var(--muted)}
+.datebtn.empty{color:#a3abb3}
+.datebtn.open{border-color:var(--accent);box-shadow:0 0 0 2px var(--soft)}
+.dclear{padding:6px 9px;color:var(--muted)}
+/* カレンダー */
+.cal{position:absolute;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.18);padding:10px;width:296px}
+.cal-head{display:flex;align-items:center;gap:6px;margin-bottom:6px}
+.cal-head b{flex:1;text-align:center;font-size:15px}
+.cal-head button{padding:3px 10px}
+.cal-msg{font-size:12px;color:var(--accent);text-align:center;margin-bottom:6px;font-weight:700}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;font-variant-numeric:tabular-nums}
+.cal-grid .w{font-size:11px;text-align:center;color:var(--muted);padding:2px 0}
+.cal-grid button{border:0;border-radius:5px;padding:7px 0;background:transparent;font-size:14px}
+.cal-grid button:hover{background:var(--soft)}
+.cal-grid .sun{color:#c62828}.cal-grid .sat{color:#1f5fa8}
+.cal-grid .today{box-shadow:inset 0 0 0 1.5px var(--accent)}
+.cal-grid .inr{background:var(--soft);border-radius:0}
+.cal-grid .edge{background:var(--accent);color:var(--accent-ink)!important}
+.cal-grid .edge:hover{background:var(--accent)}
+.cal-foot{display:flex;gap:6px;justify-content:space-between;margin-top:8px}
+.cal-foot button{font-size:12px;padding:4px 10px}
+.radios{display:flex;gap:14px}
+.hint{font-size:12px;color:var(--muted);margin:0}
+.count{font-size:12px;color:var(--muted);text-align:right}
+.count.over{color:var(--danger);font-weight:700}
+.pk-head{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pk-head h2{flex:1}
+.hd{width:100%;border-collapse:collapse;font-size:13px}
+.hd th{font-weight:400;color:var(--muted);text-align:left;padding:2px 4px}
+.hd td{padding:2px 3px}
+.hd td.n{width:42px;color:var(--muted);white-space:nowrap}
+.hd td.e{width:120px}
+.hd td.c{width:56px;text-align:center}
+.hd th{white-space:nowrap}
+.hd input[type=text]{padding:4px 6px}
+.add{align-self:flex-start}
+.preview{min-width:0;display:flex;flex-direction:column;gap:12px;align-items:center;position:sticky;top:70px;max-height:calc(100vh - 86px);overflow:auto;padding-bottom:16px}
+@media (max-width:1000px){.preview{position:static;max-height:none;overflow:visible}}
+.preview .cap{scroll-margin-top:8px;flex:none}
+.preview .sheet{flex:none}
+.preview .cap.cur{color:var(--accent);font-weight:700}
+.errbar{background:#fdecea;color:#8a1c14;border:1px solid #f1b5ae;border-radius:6px;padding:8px 12px;margin:0 16px;font-size:13px}
+.preview .cap{font-size:12px;color:var(--muted)}
+.preview .sheet{zoom:var(--z,.62);box-shadow:0 2px 10px rgba(0,0,0,.18)}
+@media (max-width:640px){
+  header.bar{position:static}
+  header.bar .hint{flex-basis:100%;order:9}
+  .wrap{padding:12px;gap:12px}
+  .row{grid-template-columns:minmax(0,1fr);gap:4px}
+  .hd td.e{width:84px}
+  .hd td.n{width:36px;font-size:12px}
+  .hd td.c{width:40px}
+  section.box{padding:12px}
+  .radios{flex-wrap:wrap;gap:6px 14px}
+}
+
+/* ===== A4 用紙 ===== */
+.sheet{width:210mm;height:297mm;background:#fff;color:#000;padding:14mm 11mm 10mm 11mm;font-family:var(--paper);
+  font-size:10.5pt;position:relative;overflow:hidden;display:flex;flex-direction:column}
+.s-title{font-family:var(--pop);font-size:19pt;text-align:center;letter-spacing:.08em;margin-bottom:3mm}
+.s-right{margin-left:88mm;display:flex;flex-direction:column;gap:2.4mm;font-size:11pt}
+.s-right .u{display:inline-block;border-bottom:1px solid #000;min-width:56mm;padding:0 2mm;font-size:14pt;font-weight:700}
+.s-right .tol{display:flex;align-items:baseline;white-space:nowrap}
+.s-right .to{display:block;flex:1;min-width:0;padding:0 1mm;font-size:12.5pt;font-weight:700;white-space:nowrap;overflow:hidden}
+.mark{display:inline-block;padding:0 1.2mm;border:1.4px solid transparent;border-radius:50%}
+.mark.on{border-color:#000}
+.s-note{display:grid;grid-template-columns:8mm 1fr;margin:3mm 0 0 12mm;font-size:9.2pt;line-height:1.75}
+.s-ttl{display:flex;align-items:flex-end;gap:5mm;margin-top:6mm;border-bottom:1.2px solid #000;padding:0 0 1.5mm 3mm;min-height:13mm}
+.s-ttl .lb{font-size:14pt;white-space:nowrap}
+.s-ttl .v{font-size:19pt;font-weight:700;line-height:1.3;flex:1;min-width:0;white-space:nowrap;overflow:hidden}
+.s-dates{display:flex;gap:8mm;justify-content:center;margin-top:3mm;font-size:11pt}
+.s-dates b{font-weight:400;margin-right:3mm}
+.s-dates .d{display:inline-block;min-width:8mm;text-align:center;font-size:14pt;font-weight:700}
+.s-dates .y{min-width:14mm}
+.s-pk{display:flex;justify-content:flex-end;align-items:baseline;margin:2.5mm 14mm 0 0;font-size:14pt}
+.s-pk .d{display:inline-block;min-width:14mm;text-align:center;font-weight:700;font-size:18pt}
+.s-hdhead{display:grid;grid-template-columns:18mm 1fr 6mm 32mm 13mm;margin-top:1mm;font-size:12pt}
+.s-hdhead span{text-align:center}
+.s-hdhead .ed,.s-hdhead .cp{font-size:9.5pt;align-self:end;white-space:nowrap}
+.s-hdhead .cp{font-size:8pt;margin-left:-3mm}
+.hdrow{display:grid;grid-template-columns:10mm 8mm 1fr 6mm 32mm 13mm;align-items:end;height:14.6mm}
+.hdrow.half{grid-template-columns:10mm 8mm 1fr 3mm 24mm 8mm;height:13.4mm}
+.hdpair{display:grid;grid-template-columns:1fr 1fr;gap:3mm}
+.hd-lb{font-size:9pt;text-decoration:underline;padding-bottom:1mm}
+.hd-no{font-size:16pt;line-height:1;padding-bottom:1.6mm}
+.hdrow.half .hd-no{font-size:11pt}
+.hd-line{border-bottom:1px solid #000;font-size:15pt;font-weight:700;padding:0 1mm .5mm;min-height:8mm;display:block;line-height:1.25;overflow:hidden;white-space:nowrap}
+.hd-line.sm{font-size:12.5pt}
+.hd-cb{display:flex;justify-content:center;padding-bottom:1mm}
+.cb{width:3.8mm;height:3.8mm;border:1.4px solid #000;position:relative}
+.cb.on::after{content:"";position:absolute;left:.9mm;top:-.6mm;width:1.3mm;height:2.6mm;border:solid #000;border-width:0 .55mm .55mm 0;transform:rotate(45deg)}
+.s-info-lb{margin-top:6mm;font-size:10pt;text-decoration:underline}
+.grid80{display:grid;grid-template-columns:repeat(20,8.6mm);grid-auto-rows:11.8mm;margin:1.5mm 0 0 5mm;border-top:1px solid #000;border-left:1px solid #000;width:max-content}
+.grid80 span{border-right:1px solid #000;border-bottom:1px solid #000;display:flex;align-items:center;justify-content:center;font-size:17pt;font-weight:700}
+.s-page{position:absolute;right:11mm;bottom:6mm;font-size:8pt;color:#444}
+
+@page{size:A4 portrait;margin:0}
+@media print{
+  body{background:#fff}
+  header.bar,.form,.preview .cap{display:none!important}
+  .wrap{display:block;padding:0}
+  .preview{display:block;position:static;max-height:none;overflow:visible;padding:0}
+  .errbar{display:none}
+  .preview .sheet{zoom:1!important;box-shadow:none;break-after:page;page-break-after:always}
+  .preview .sheet:last-child{break-after:auto;page-break-after:auto}
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <h1>取材完了報告書</h1>
+  <span class="hint" id="status">入力内容はこのブラウザに自動保存されます</span>
+  <span class="sp"></span>
+  <button id="btnNew" type="button">新しい報告書</button>
+  <button id="btnPdf" type="button">PDFで保存</button>
+  <button class="primary" id="btnPrint" type="button">印刷（<span id="pc">1</span>枚）</button>
+</header>
+
+<div class="wrap">
+  <div class="form">
+    <section class="box">
+      <h2>共通項目 <span class="tag">全部の用紙に印刷されます</span></h2>
+      <div class="row"><label for="reporter">取材者名</label><input type="text" id="reporter"></div>
+      <div class="row"><label>お知らせのお届け</label>
+        <div class="radios">
+          <label><input type="radio" name="delivered" id="dlvY" value="済"> 済</label>
+          <label><input type="radio" name="delivered" id="dlvN" value="未"> 未</label>
+          <label><input type="radio" name="delivered" id="dlvX" value=""> 手書きする</label>
+        </div></div>
+      <div class="row"><label for="deliverTo">届ける・届けた先</label><input type="text" id="deliverTo" placeholder="例：○○保育園□□先生"></div>
+      <div class="row"><label>取材日</label><div class="dates" data-range="sh" data-scope="c"></div></div>
+      <div class="row"><label for="cTitle">タイトル</label><input type="text" id="cTitle"></div>
+      <div class="row"><label>放送日</label><div class="dates" data-range="hs" data-scope="c"></div></div>
+      <div class="row"><label for="cInfo">番組情報<br>（共通の部分）</label><div><textarea id="cInfo"></textarea><div class="count" id="cInfoCnt">0/80字</div></div></div>
+      <div class="row"><label for="suffixOn">番組情報の末尾</label>
+        <div style="display:flex;flex-direction:column;gap:6px">
+          <label><input type="checkbox" id="suffixOn"> 80字の枠の最後のマスに取材日の一文を入れる</label>
+          <input type="text" id="suffix">
+          <p class="hint">空欄なら取材日から自動で入ります（例：2026年10月8日取材）。文言を変えたいときはここに書いてください。</p>
+        </div></div>
+      <p class="hint">完パケごとに違う項目は下の各完パケ欄に入力します。タイトル・放送日は、完パケ側が空欄ならここの内容が使われます。番組情報は、ここの文と完パケごとの文がつながって印刷されます。</p>
+    </section>
+    <section class="box">
+      <h2>HD <span class="tag">全部の用紙に同じ内容で印刷されます</span></h2>
+      <div class="row"><label for="cEditor">編集者（まとめて）</label><input type="text" id="cEditor" placeholder="全部同じ人ならここに。行ごとに違えば下の表へ"></div>
+      <div id="cHd"></div>
+    </section>
+    <div id="pkList" style="display:flex;flex-direction:column;gap:14px"></div>
+    <button class="add" id="btnAdd" type="button">＋ 完パケを追加</button>
+  </div>
+
+  <div class="preview" id="preview"></div>
+</div>
+
+<script>
+const KEY = 'shuzai-report-v5';
+const blankHD = () => Array.from({length:10}, () => ({detail:'', editor:'', cap:false}));
+const blankPk = () => ({title:'', hsFrom:'', hsTo:'', editor:'', info:'', infoPos:'after', noSuffix:false, hd: blankHD()});
+const blankState = (keepReporter='') => ({reporter:keepReporter, delivered:'', deliverTo:'', shFrom:'', shTo:'',
+  title:'', hsFrom:'', hsTo:'', editor:'', info:'', suffixOn:false, suffix:'', hd: blankHD(), packages:[blankPk()]});
+
+
+let state;
+try { state = JSON.parse(localStorage.getItem(KEY)); } catch(e) { state = null; }
+if (!state || !Array.isArray(state.packages)) state = blankState();
+if (!Array.isArray(state.hd) || state.hd.length!==10) state.hd = blankHD();
+if (!state.hd.some(h=>h.detail||h.editor||h.cap) && state.packages[0] && Array.isArray(state.packages[0].hd)) state.hd = JSON.parse(JSON.stringify(state.packages[0].hd));
+
+function save(){
+  try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) {}
+}
+
+/* ---------- 共通項目フォーム ---------- */
+const commonMap = {reporter:'reporter', deliverTo:'deliverTo', cTitle:'title', cEditor:'editor', cInfo:'info'};
+function fillCommon(){
+  for (const [id,k] of Object.entries(commonMap)) document.getElementById(id).value = state[k] || '';
+  document.getElementById(state.delivered==='済'?'dlvY':state.delivered==='未'?'dlvN':'dlvX').checked = true;
+  updCount(document.getElementById('cInfo'), document.getElementById('cInfoCnt'));
+  document.getElementById('suffixOn').checked = !!state.suffixOn;
+  document.getElementById('suffix').value = state.suffix || '';
+  updSuffixPh();
+  renderCommonHd();
+  drawDates();
+}
+function autoSuffix(){
+  const A = ymd(state.shFrom); return A ? `${A.y}年${A.m}月${A.d}日取材` : '';
+}
+function suffixText(){ return state.suffixOn ? (state.suffix || autoSuffix()) : ''; }
+function updSuffixPh(){
+  const el = document.getElementById('suffix');
+  el.placeholder = autoSuffix() || '取材日を入れると自動で入ります';
+  el.disabled = !state.suffixOn;
+}
+document.getElementById('suffixOn').addEventListener('change', e => { state.suffixOn = e.target.checked; updSuffixPh(); refreshPlaceholders(); changed(); });
+document.getElementById('suffix').addEventListener('input', e => { state.suffix = e.target.value; refreshPlaceholders(); changed(); });
+for (const [id,k] of Object.entries(commonMap)){
+  document.getElementById(id).addEventListener('input', e => {
+    state[k] = e.target.value;
+    if (id==='cInfo') updCount(e.target, document.getElementById('cInfoCnt'));
+    refreshPlaceholders();
+    changed();
+  });
+}
+document.querySelectorAll('input[name=delivered]').forEach(r => r.addEventListener('change', e => { state.delivered = e.target.value; changed(); }));
+
+function updCount(ta, el){
+  const n = [...ta.value.replace(/\n/g,'')].length;
+  el.textContent = n + '/80字'; el.classList.toggle('over', n>80);
+}
+
+/* ---------- 完パケごとのフォーム ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function renderPkForms(){
+  const list = document.getElementById('pkList');
+  list.innerHTML = state.packages.map((p,i) => `
+  <section class="box" data-i="${i}">
+    <div class="pk-head">
+      <h2>完パケ ${i+1}</h2>
+      <button type="button" data-act="dup">複製</button>
+      ${state.packages.length>1?`<button type="button" class="danger" data-act="del">削除</button>`:''}
+    </div>
+    <div class="row"><label for="pk${i}title">タイトル</label><input type="text" id="pk${i}title" data-f="title" value="${esc(p.title)}"></div>
+    <div class="row"><label>放送日</label><div class="dates" data-range="hs" data-scope="${i}"></div></div>
+    <div class="row"><label for="pk${i}info">番組情報<br>（この完パケ分）</label><div>
+      <div class="radios" style="margin-bottom:4px;font-size:13px">
+        <label><input type="radio" name="pk${i}pos" data-f="infoPos" value="after" ${(p.infoPos||'after')==='after'?'checked':''}> 共通の後ろにつなぐ</label>
+        <label><input type="radio" name="pk${i}pos" data-f="infoPos" value="before" ${p.infoPos==='before'?'checked':''}> 共通の前</label>
+        <label><input type="radio" name="pk${i}pos" data-f="infoPos" value="only" ${p.infoPos==='only'?'checked':''}> 共通を使わない</label>
+      </div>
+      <textarea id="pk${i}info" data-f="info">${esc(p.info)}</textarea>
+      <label data-sfx style="font-size:13px"><input type="checkbox" id="pk${i}nosfx" data-f="noSuffix" ${p.noSuffix?'checked':''}> この完パケは末尾の取材日を付けない</label>
+      <div class="count" data-cnt></div>
+      <div class="hint" data-full style="white-space:pre-wrap"></div></div></div>
+  </section>`).join('');
+  refreshPlaceholders();
+  drawDates();
+}
+function hdTable(pre, arr){
+  return `<table class="hd">
+      <thead><tr><th></th><th>詳細</th><th>編集者</th><th>ｷｬﾌﾟﾁｬ</th></tr></thead>
+      <tbody>${arr.map((h,j)=>`
+        <tr><td class="n">HD ${j+1}</td>
+        <td><input type="text" id="${pre}d${j}" data-h="${j}" data-k="detail" value="${esc(h.detail)}"></td>
+        <td class="e"><input type="text" id="${pre}e${j}" data-h="${j}" data-k="editor" value="${esc(h.editor)}"></td>
+        <td class="c"><input type="checkbox" id="${pre}c${j}" data-h="${j}" data-k="cap" ${h.cap?'checked':''} aria-label="HD${j+1} キャプチャ"></td></tr>`).join('')}
+      </tbody>
+    </table>`;
+}
+function renderCommonHd(){ document.getElementById('cHd').innerHTML = hdTable('c', state.hd); }
+document.getElementById('cHd').addEventListener('input', e => {
+  if (!e.target.dataset.h) return;
+  const h = state.hd[+e.target.dataset.h];
+  h[e.target.dataset.k] = e.target.type==='checkbox' ? e.target.checked : e.target.value;
+  refreshPlaceholders(); changed();
+});
+/* 完パケのHD行：空欄の項目は共通の行から */
+function mergedHd(p, j){
+  const c = state.hd[j];
+  return {detail: c.detail, editor: c.editor || (c.detail && state.editor) || '', cap: c.cap};
+}
+function infoOf(p){
+  const c = (state.info||'').replace(/\n/g,''), o = (p.info||'').replace(/\n/g,'');
+  const pos = p.infoPos || 'after';
+  return pos==='only' ? o : pos==='before' ? o + c : c + o;
+}
+function sfxOf(p){ return p.noSuffix ? '' : suffixText(); }
+/* 80マスの並び：本文は先頭から、取材日の一文は最後のマスに右詰め */
+function cellsOf(p){
+  const body = [...infoOf(p)], sfx = [...sfxOf(p)];
+  const cells = Array(80).fill('');
+  const room = Math.max(0, 80 - sfx.length);
+  body.slice(0, room).forEach((ch,k) => cells[k] = ch);
+  sfx.slice(-80).forEach((ch,k) => cells[80 - Math.min(sfx.length,80) + k] = ch);
+  return cells;
+}
+function refreshPlaceholders(){
+  document.querySelectorAll('#pkList section.box').forEach(sec => {
+    const p = state.packages[+sec.dataset.i];
+    sec.querySelector('[data-f=title]').placeholder = state.title ? '空欄なら共通：' + state.title : '';
+    sec.querySelector('textarea[data-f=info]').placeholder = 'この完パケだけの内容';
+    sec.querySelector('[data-sfx]').hidden = !state.suffixOn;
+    const full = infoOf(p), sfx = sfxOf(p), n = [...full].length + [...sfx].length, cnt = sec.querySelector('[data-cnt]');
+    cnt.textContent = '合計 ' + n + '/80字' + (n>80 ? '（80字を超えた分は印刷されません）' : '');
+    cnt.classList.toggle('over', n>80);
+    sec.querySelector('[data-full]').textContent = (full || sfx) ? '印刷される文：' + full + (sfx ? '　…（枠の最後に）' + sfx : '') : '';
+  });
+}
+const pkList = document.getElementById('pkList');
+pkList.addEventListener('input', e => {
+  const sec = e.target.closest('section.box'); if (!sec) return;
+  const p = state.packages[+sec.dataset.i];
+  if (e.target.dataset.f){ p[e.target.dataset.f] = e.target.type==='checkbox' ? e.target.checked : e.target.value; refreshPlaceholders(); }
+  else if (e.target.dataset.h){ const h = p.hd[+e.target.dataset.h];
+    h[e.target.dataset.k] = e.target.type==='checkbox' ? e.target.checked : e.target.value; }
+  changed();
+});
+pkList.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const i = +b.closest('section.box').dataset.i;
+  if (b.dataset.act==='del') state.packages.splice(i,1);
+  if (b.dataset.act==='dup') state.packages.splice(i+1,0,JSON.parse(JSON.stringify(state.packages[i])));
+  if (b.dataset.act==='copyhd') state.packages[i].hd = JSON.parse(JSON.stringify(state.packages[i-1].hd));
+  renderPkForms(); changed();
+});
+document.getElementById('btnAdd').addEventListener('click', () => {
+  state.packages.push(blankPk()); renderPkForms(); changed();
+  pkList.lastElementChild.scrollIntoView({behavior:'smooth', block:'start'});
+});
+
+
+/* ---------- カレンダーで日付を選ぶ ---------- */
+const WD = ['日','月','火','水','木','金','土'];
+const pad = n => String(n).padStart(2,'0');
+const iso = (y,m,d) => `${y}-${pad(m)}-${pad(d)}`;
+function jp(s){ const A = ymd(s); if(!A) return ''; const w = WD[new Date(A.y,A.m-1,A.d).getDay()]; return `${A.y}年${A.m}月${A.d}日(${w})`; }
+function rangeObj(el){ return el.dataset.scope==='c' ? state : state.packages[+el.dataset.scope]; }
+function rangeKeys(el){ return [el.dataset.range+'From', el.dataset.range+'To']; }
+function rangeLabel(el){
+  const o = rangeObj(el), [kf,kt] = rangeKeys(el), f = o[kf], to = o[kt];
+  if (!f && !to){
+    if (el.dataset.scope!=='c' && state[kf]) return {t:'空欄なら共通：' + jp(state[kf]) + (state[kt] && state[kt]!==state[kf] ? ' ～ ' + jp(state[kt]).replace(/^\d+年/,'') : ''), empty:true};
+    return {t:'クリックして日付を選ぶ', empty:true};
+  }
+  if (!to || to===f) return {t: jp(f), empty:false};
+  return {t: jp(f) + ' ～ ' + jp(to).replace(/^\d+年/,''), empty:false};
+}
+function drawDates(){
+  document.querySelectorAll('.dates[data-range]').forEach(el => {
+    const L = rangeLabel(el), id = 'db_' + el.dataset.range + '_' + el.dataset.scope;
+    el.innerHTML = `<button type="button" class="datebtn${L.empty?' empty':''}" id="${id}"><span class="ic"></span><span>${esc(L.t)}</span></button>` +
+      (L.empty ? '' : `<button type="button" class="dclear" title="日付を消す" aria-label="日付を消す">×</button>`);
+  });
+}
+let cal = null; // {el, y, m, picking}
+document.addEventListener('click', e => {
+  const btn = e.target.closest('.datebtn, .dclear');
+  if (btn){
+    const el = btn.closest('.dates');
+    if (btn.classList.contains('dclear')){
+      const o = rangeObj(el), [kf,kt] = rangeKeys(el); o[kf] = ''; o[kt] = '';
+      closeCal(); afterDate(el); return;
+    }
+    if (cal && cal.el===el){ closeCal(); return; }
+    openCal(el); return;
+  }
+  if (cal && !e.target.closest('.cal')) closeCal();
+});
+document.addEventListener('keydown', e => { if (e.key==='Escape' && cal) closeCal(); });
+function openCal(el){
+  closeCal();
+  const o = rangeObj(el), [kf] = rangeKeys(el);
+  const base = ymd(o[kf]) || (el.dataset.range==='hs' && ymd(state.hsFrom)) || (el.dataset.range==='hs' && ymd(state.shTo || state.shFrom)) || (()=>{const d=new Date();return {y:d.getFullYear(),m:d.getMonth()+1};})();
+  cal = {el, y:base.y, m:base.m, picking:false, node:document.createElement('div')};
+  cal.node.className = 'cal';
+  document.body.appendChild(cal.node);
+  el.querySelector('.datebtn').classList.add('open');
+  drawCal();
+}
+function closeCal(){
+  if (!cal) return;
+  cal.node.remove();
+  const b = cal.el.querySelector('.datebtn'); if (b) b.classList.remove('open');
+  cal = null;
+}
+function placeCal(){
+  const r = cal.el.getBoundingClientRect(), w = cal.node.offsetWidth;
+  let left = r.left + window.scrollX; left = Math.min(left, window.scrollX + document.documentElement.clientWidth - w - 8);
+  cal.node.style.left = Math.max(8, left) + 'px';
+  cal.node.style.top = (r.bottom + window.scrollY + 4) + 'px';
+}
+function drawCal(){
+  const {el, y, m} = cal, o = rangeObj(el), [kf,kt] = rangeKeys(el);
+  const f = o[kf], to = o[kt] || o[kf];
+  const today = (()=>{const d=new Date();return iso(d.getFullYear(),d.getMonth()+1,d.getDate());})();
+  const first = new Date(y, m-1, 1).getDay(), days = new Date(y, m, 0).getDate();
+  let cells = WD.map((w,i)=>`<span class="w ${i===0?'sun':i===6?'sat':''}">${w}</span>`).join('');
+  for (let i=0;i<first;i++) cells += '<span></span>';
+  for (let d=1; d<=days; d++){
+    const v = iso(y,m,d), wd = (first + d - 1) % 7, cls = [];
+    if (wd===0) cls.push('sun'); if (wd===6) cls.push('sat');
+    if (v===today) cls.push('today');
+    if (f && v>=f && v<=to) cls.push(v===f || v===to ? 'edge' : 'inr');
+    cells += `<button type="button" class="${cls.join(' ')}" data-d="${v}">${d}</button>`;
+  }
+  const msg = cal.picking ? '終わりの日をクリック（1日だけなら同じ日をもう一度）' : '始まりの日をクリック';
+  cal.node.innerHTML = `<div class="cal-head"><button type="button" data-nav="-1" aria-label="前の月">‹</button><b>${y}年 ${m}月</b><button type="button" data-nav="1" aria-label="次の月">›</button></div>
+    <div class="cal-msg">${msg}</div><div class="cal-grid">${cells}</div>
+    <div class="cal-foot"><button type="button" data-today>今月に戻る</button><button type="button" data-close>閉じる</button></div>`;
+  placeCal();
+}
+document.addEventListener('click', e => {
+  if (!cal || !e.target.closest('.cal')) return;
+  e.stopPropagation();
+  const t = e.target.closest('button'); if (!t) return;
+  if (t.dataset.nav){ cal.m += +t.dataset.nav; if (cal.m<1){cal.m=12;cal.y--;} if (cal.m>12){cal.m=1;cal.y++;} drawCal(); return; }
+  if (t.hasAttribute('data-today')){ const d=new Date(); cal.y=d.getFullYear(); cal.m=d.getMonth()+1; drawCal(); return; }
+  if (t.hasAttribute('data-close')){ closeCal(); return; }
+  if (t.dataset.d){
+    const el = cal.el, o = rangeObj(el), [kf,kt] = rangeKeys(el), v = t.dataset.d;
+    if (!cal.picking){ o[kf] = v; o[kt] = ''; cal.picking = true; afterDate(el, true); drawCal(); }
+    else {
+      if (v < o[kf]){ o[kt] = o[kf]; o[kf] = v; } else o[kt] = (v===o[kf] ? '' : v);
+      afterDate(el); closeCal();
+    }
+  }
+}, true);
+window.addEventListener('resize', () => { if (cal) placeCal(); });
+function afterDate(el, keepOpen){
+  if (el.dataset.range==='sh') updSuffixPh();
+  if (keepOpen){ const L = rangeLabel(el); const b = el.querySelector('.datebtn span:last-child'); if (b) b.textContent = L.t; el.querySelector('.datebtn').classList.remove('empty'); }
+  else drawDates();
+  refreshPlaceholders(); changed();
+}
+
+/* ---------- 用紙の描画 ---------- */
+function ymd(s){ if(!s) return null; const [y,m,d] = s.split('-').map(Number); return {y,m,d}; }
+function dateRange(a,b){
+  const A = ymd(a), B = ymd(b);
+  const d = v => `<span class="d">${v ?? ''}</span>`;
+  return `<span class="d y">${A?A.y:''}</span>年${d(A&&A.m)}月${d(A&&A.d)}日 ～ ${d(B&&B.m)}月${d(B&&B.d)}日`;
+}
+function hdCells(j, half, p){
+  const h = mergedHd(p, j), num = j + 1, editor = h.editor;
+  return `<div class="hdrow${half?' half':''}">
+    <span class="hd-lb">ＨＤ</span><span class="hd-no">${num}</span>
+    <span class="hd-line${half?' sm':''}">${esc(h.detail)}</span><span></span>
+    <span class="hd-line sm">${esc(editor)}</span>
+    <span class="hd-cb"><span class="cb${h.cap?' on':''}"></span></span></div>`;
+}
+function sheetHTML(p, i, total){
+  const title = p.title || state.title;
+  const hsFrom = p.hsFrom || state.hsFrom, hsTo = p.hsTo || state.hsTo;
+  const cells = cellsOf(p).map(ch => `<span>${esc(ch)}</span>`).join('');
+  const dv = state.delivered;
+  return `<div class="sheet">
+    <div class="s-title">取材完了報告書</div>
+    <div class="s-right">
+      <div>取材者名 <span class="u">${esc(state.reporter)}</span></div>
+      <div>放送日のお知らせのお届け　（ <span class="mark${dv==='済'?' on':''}">済</span> ・ <span class="mark${dv==='未'?' on':''}">未</span> ）</div>
+      <div class="tol"><span>届ける・届けた先（</span><span class="to">${esc(state.deliverTo)}</span><span>）</span></div>
+    </div>
+    <div class="s-note"><span>注</span><div>・未届けの場合は必ず『○○保育園□□先生』など詳しく記入すること。<br>
+      （誰かに届ければ渡してもらえる場合などは『○○保育園誰でも可』などと記入）<br>
+      ・届け済みの場合には、お届けチェック表に必ず記入すること。</div></div>
+    <div class="s-ttl"><span class="lb">タイトル</span><span class="v">${esc(title)}</span></div>
+    <div class="s-dates"><span><b>取材日</b>${dateRange(state.shFrom, state.shTo)}</span><span><b>放送日</b>${dateRange(hsFrom, hsTo)}</span></div>
+    <div class="s-pk">完パケ<span class="d">${total}</span>本</div>
+    <div class="s-hdhead"><span></span><span>詳細</span><span></span><span class="ed">編集者</span><span class="cp">キャプチャ</span></div>
+    ${[0,1,2,3,4,5].map(j=>hdCells(j,false,p)).join('')}
+    <div class="hdpair">${hdCells(6,true,p)}${hdCells(8,true,p)}</div>
+    <div class="hdpair">${hdCells(7,true,p)}${hdCells(9,true,p)}</div>
+    <div class="s-info-lb">番組情報（80字以内）</div>
+    <div class="grid80">${cells}</div>
+    ${total>1?`<div class="s-page">${i+1} / ${total}</div>`:''}
+  </div>`;
+}
+function renderPreview(){
+  const n = state.packages.length;
+  document.getElementById('pc').textContent = n;
+  const pv = document.getElementById('preview'), keep = pv.scrollTop;
+  pv.innerHTML = state.packages.map((p,i) => `<div class="cap${i===curPk?' cur':''}" id="cap${i}">完パケ ${i+1} の用紙${i===curPk?'（入力中）':''}</div>` + sheetHTML(p,i,n)).join('');
+  pv.scrollTop = keep;
+  fitText(pv);
+}
+/* 枠からはみ出す長い文字は、収まるまで小さくする */
+function fitText(root){
+  root.querySelectorAll('.hd-line, .s-ttl .v, .s-right .to').forEach(el => {
+    el.style.fontSize = '';
+    let pt = parseFloat(getComputedStyle(el).fontSize);
+    let guard = 0;
+    while (el.scrollWidth > el.clientWidth + 1 && pt > 6 && guard++ < 40){ pt *= 0.93; el.style.fontSize = pt + 'px'; }
+  });
+}
+let curPk = 0;
+/* 入力中の完パケの用紙をプレビューに表示 */
+document.addEventListener('focusin', e => {
+  const sec = e.target.closest && e.target.closest('#pkList section.box');
+  const i = sec ? +sec.dataset.i : null;
+  if (i===null || i===curPk) return;
+  curPk = i; renderPreview();
+  const c = document.getElementById('cap'+i);
+  const pv = document.getElementById('preview');
+  if (c && window.matchMedia('(min-width:1001px)').matches) pv.scrollTo({top: c.offsetTop - 8, behavior:'auto'});
+});
+function showError(msg){
+  let bar = document.getElementById('errbar');
+  if (!bar){ bar = document.createElement('div'); bar.id = 'errbar'; bar.className = 'errbar';
+    document.querySelector('header.bar').after(bar); }
+  bar.textContent = 'プレビューの更新でエラーが出ました。この文をそのまま知らせてください：' + msg;
+}
+window.addEventListener('error', e => showError(e.message || String(e.error)));
+
+let t;
+function changed(){
+  clearTimeout(t);
+  t = setTimeout(() => {
+    try { renderPreview(); } catch(err){ showError(err && err.message || String(err)); }
+    save();
+  }, 60);
+}
+/* 日本語入力の確定時や変更時も必ず反映 */
+['change','compositionend','keyup'].forEach(ev => document.addEventListener(ev, e => {
+  if (e.target.closest && e.target.closest('.form')) changed();
+}));
+
+/* ---------- ボタン ---------- */
+const statusEl = document.getElementById('status');
+function flash(msg){ statusEl.textContent = msg; clearTimeout(flash.t); flash.t = setTimeout(()=>statusEl.textContent='入力内容はこのブラウザに自動保存されます', 4000); }
+document.getElementById('btnPrint').addEventListener('click', () => { renderPreview(); window.print(); });
+
+let newArmed = false;
+document.getElementById('btnNew').addEventListener('click', e => {
+  if (!newArmed){ newArmed = true; e.target.textContent = 'もう一度押すと消去'; setTimeout(()=>{newArmed=false; e.target.textContent='新しい報告書';}, 3000); return; }
+  newArmed = false; e.target.textContent = '新しい報告書';
+  state = blankState(state.reporter); fillCommon(); renderPkForms(); renderPreview(); save();
+  flash('新しい報告書にしました（取材者名は残しています）');
+});
+/* ---------- PDF保存（ブラウザだけで作成） ---------- */
+const PX_W = 794, PX_H = 1123, SCALE = 2.5; // A4 = 210×297mm
+function sheetToJpeg(sheet, css){
+  return new Promise((resolve, reject) => {
+    const wrap = document.createElement('div');
+    const st = document.createElement('style'); st.textContent = css;
+    wrap.appendChild(st);
+    const clone = sheet.cloneNode(true); clone.style.zoom = '1'; clone.style.boxShadow = 'none';
+    wrap.appendChild(clone);
+    const xhtml = new XMLSerializer().serializeToString(wrap);
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${PX_W*SCALE}" height="${PX_H*SCALE}" viewBox="0 0 ${PX_W} ${PX_H}"><foreignObject x="0" y="0" width="${PX_W}" height="${PX_H}">${xhtml}</foreignObject></svg>`;
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const c = document.createElement('canvas'); c.width = PX_W*SCALE; c.height = PX_H*SCALE;
+        const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0,0,c.width,c.height);
+        g.drawImage(img, 0, 0, c.width, c.height);
+        const b64 = c.toDataURL('image/jpeg', 0.9).split(',')[1];
+        const bin = atob(b64), u = new Uint8Array(bin.length);
+        for (let i=0;i<bin.length;i++) u[i] = bin.charCodeAt(i);
+        resolve({bytes:u, w:c.width, h:c.height});
+      } catch(err){ reject(err); }
+    };
+    img.onerror = () => reject(new Error('用紙の画像を作れませんでした'));
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+  });
+}
+function buildPdf(pages){
+  const enc = new TextEncoder(), parts = [], offs = [];
+  let len = 0;
+  const push = x => { const b = typeof x==='string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  const W = 595.28, H = 841.89, n = pages.length;
+  push('%PDF-1.4\n%\xE2\xE3\xCF\xD3\n');
+  const obj = (id, body) => { offs[id] = len; push(`${id} 0 obj\n`); body(); push('\nendobj\n'); };
+  const kids = pages.map((_,i) => `${3+i*3} 0 R`).join(' ');
+  obj(1, () => push('<< /Type /Catalog /Pages 2 0 R >>'));
+  obj(2, () => push(`<< /Type /Pages /Kids [${kids}] /Count ${n} >>`));
+  pages.forEach((pg,i) => {
+    const pid = 3+i*3, cid = pid+1, iid = pid+2;
+    obj(pid, () => push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /XObject << /Im${i} ${iid} 0 R >> >> /Contents ${cid} 0 R >>`));
+    const cs = `q ${W} 0 0 ${H} 0 0 cm /Im${i} Do Q`;
+    obj(cid, () => { push(`<< /Length ${cs.length} >>\nstream\n${cs}\nendstream`); });
+    obj(iid, () => { push(`<< /Type /XObject /Subtype /Image /Width ${pg.w} /Height ${pg.h} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${pg.bytes.length} >>\nstream\n`); push(pg.bytes); push('\nendstream'); });
+  });
+  const total = 3 + n*3, xref = len;
+  let x = `xref\n0 ${total}\n0000000000 65535 f \n`;
+  for (let i=1;i<total;i++) x += String(offs[i]).padStart(10,'0') + ' 00000 n \n';
+  push(x + `trailer\n<< /Size ${total} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`);
+  return new Blob(parts, {type:'application/pdf'});
+}
+const btnPdf = document.getElementById('btnPdf');
+btnPdf.addEventListener('click', async () => {
+  if (btnPdf.disabled) return;
+  btnPdf.disabled = true; const label = btnPdf.textContent; btnPdf.textContent = 'PDFを作成中…';
+  try {
+    renderPreview();
+    if (document.fonts && document.fonts.ready) await document.fonts.ready;
+    const css = [...document.querySelectorAll('style')].map(x => x.textContent).join('\n');
+    const pages = [];
+    for (const sh of document.querySelectorAll('#preview .sheet')) pages.push(await sheetToJpeg(sh, css));
+    const blob = buildPdf(pages);
+    const d = (state.shFrom || '').replace(/-/g,'');
+    const name = '取材完了報告書_' + (state.title || '無題').replace(/[\\/:*?"<>|]/g,'_') + (d ? '_' + d : '') + '.pdf';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    flash('PDFを保存しました：' + name + '（' + pages.length + '枚）');
+  } catch(err){
+    flash('このブラウザではPDFを直接作れませんでした。印刷画面の「送信先」で「PDFに保存」を選んでください');
+    setTimeout(() => window.print(), 300);
+  } finally {
+    btnPdf.disabled = false; btnPdf.textContent = label;
+  }
+});
+
+/* プレビューの縮尺を画面幅に合わせる */
+function fitZoom(){
+  const pv = document.getElementById('preview');
+  const z = Math.max(.3, Math.min(.62, (pv.clientWidth - 12) / 794));
+  pv.style.setProperty('--z', z.toFixed(3));
+}
+window.addEventListener('resize', fitZoom);
+fillCommon(); renderPkForms(); renderPreview(); fitZoom();
+</script>
+</body>
+</html>
