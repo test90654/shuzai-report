@@ -619,7 +619,8 @@ btnPdf.addEventListener('click', async () => {
     for (const sh of document.querySelectorAll('#preview .sheet')) pages.push(await sheetToJpeg(sh, css));
     const blob = buildPdf(pages);
     const d = (state.shFrom || '').replace(/-/g,'');
-    const name = '取材完了報告書_' + (state.title || '無題').replace(/[\\/:*?"<>|]/g,'_') + (d ? '_' + d : '') + '.pdf';
+    const ttl = (state.title || (state.packages[0] && state.packages[0].title) || '無題').replace(/[\\/:*?"<>|]/g,'_').trim();
+    const name = (d ? d + ' ' : '') + ttl + '.pdf';
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
